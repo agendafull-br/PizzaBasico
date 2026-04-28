@@ -1,0 +1,1620 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#D32F2F">
+  <title>Pizzaria Bella Napoli • Reservas & Delivery</title>
+
+  <script type="importmap">
+    {
+      "imports": {
+        "firebase/app": "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js",
+        "firebase/auth": "https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js",
+        "firebase/firestore": "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js"
+      }
+    }
+  </script>
+
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+  <style>
+    /* =====================================================
+       🎨 CORES PRINCIPAIS DO SITE – ALTERE AQUI COMO DESEJAR
+       ===================================================== */
+    :root {
+      --primary: #D32F2F;           /* Cor principal (botões, bordas ativas) */
+      --primary-hover: #B71C1C;     /* Tom mais escuro para hover */
+      --primary-light: #EF5350;     /* Tom mais claro para detalhes */
+      --secondary: #2E1A0F;         /* Fundo escuro secundário */
+      --bg-dark: #1A0D06;           /* Fundo mais escuro */
+      --text: #FFF3E0;              /* Cor do texto principal */
+      --text-secondary: #BCAAA4;    /* Texto secundário */
+      --border: #4E342E;            /* Cor das bordas */
+      --glass: rgba(46, 26, 15, 0.75);
+      --card-shadow: 0 8px 32px rgba(0,0,0,0.6);
+      --gradient: linear-gradient(135deg, #D32F2F, #FF8A65);
+      --radius: 20px;
+      --transition: all 0.25s ease;
+    }
+    /* Fim da área de cores – o resto do CSS não precisa ser alterado */
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+    }
+
+    body {
+      background: radial-gradient(circle at top, #3E2723 0%, #1A0D06 70%);
+      background-attachment: fixed;
+      color: var(--text);
+      min-height: 100vh;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .loader {
+      position: fixed;
+      inset: 0;
+      background: rgba(26,13,6,0.95);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      transition: opacity 0.5s;
+    }
+    .loader.hide {
+      opacity: 0;
+      pointer-events: none;
+    }
+    .spinner {
+      width: 60px;
+      height: 60px;
+      border: 3px solid rgba(211,47,47,0.2);
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .login-screen {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, rgba(26,13,6,0.85) 0%, rgba(46,26,15,0.7) 100%), url('https://images.unsplash.com/photo-1513104890138-7c749659a591?ixlib=rb-4.0.3&auto=format&fit=crop&w=1950&q=80') center/cover no-repeat;
+      background-blend-mode: overlay;
+    }
+    .login-box {
+      background: linear-gradient(145deg, rgba(46,26,15,0.9), rgba(26,13,6,0.95));
+      backdrop-filter: blur(20px);
+      border-radius: var(--radius);
+      padding: 40px 30px;
+      width: 100%;
+      max-width: 460px;
+      margin: 20px;
+      border: 1px solid rgba(255,138,101,0.3);
+      box-shadow: 0 25px 60px rgba(0,0,0,0.8);
+      text-align: center;
+    }
+    .login-logo {
+      max-width: 280px;
+      max-height: 180px;
+      margin-bottom: 20px;
+      border-radius: 16px;
+    }
+    .login-box h1 {
+      color: var(--primary);
+      margin-bottom: 25px;
+      font-size: 28px;
+    }
+    .tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 20px;
+    }
+    .tab {
+      flex: 1;
+      padding: 12px;
+      background: transparent;
+      color: var(--text-secondary);
+      border: 1.5px solid var(--border);
+      border-radius: 12px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: var(--transition);
+    }
+    .tab.active {
+      background: var(--gradient);
+      color: white;
+      border-color: transparent;
+    }
+    input,
+    select,
+    textarea {
+      width: 100%;
+      padding: 14px 16px;
+      margin-bottom: 14px;
+      background: rgba(26,13,6,0.8);
+      border: 1.5px solid var(--border);
+      border-radius: 12px;
+      color: white;
+      font-size: 15px;
+      outline: none;
+    }
+    input:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 15px rgba(211,47,47,0.3);
+    }
+    .btn {
+      padding: 15px 20px;
+      border: none;
+      border-radius: 12px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: var(--transition);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font-size: 15px;
+    }
+    .btn-primary {
+      background: var(--gradient);
+      color: white;
+      box-shadow: 0 4px 20px rgba(211,47,47,0.4);
+    }
+    .btn-primary:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 30px rgba(211,47,47,0.6);
+    }
+    .btn-primary:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .btn-secondary {
+      background: var(--border);
+      color: white;
+    }
+    .btn-danger {
+      background: #B71C1C;
+      color: white;
+    }
+    .btn-success {
+      background: #2E7D32;
+      color: white;
+    }
+    .btn-warning {
+      background: #F57C00;
+      color: white;
+    }
+
+    .screen {
+      display: none;
+      min-height: 100vh;
+      padding: 20px 15px;
+      animation: fadeUp 0.4s;
+    }
+    .screen.active {
+      display: block;
+    }
+    @keyframes fadeUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+    }
+
+    .header {
+      background: var(--glass);
+      backdrop-filter: blur(15px);
+      border-radius: var(--radius);
+      padding: 18px 25px;
+      margin-bottom: 20px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      border: 1px solid rgba(255,138,101,0.2);
+    }
+    .nav-btn {
+      padding: 10px 20px;
+      background: transparent;
+      color: var(--primary);
+      border: 1.5px solid var(--primary);
+      border-radius: 10px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: var(--transition);
+    }
+    .nav-btn.active {
+      background: var(--primary);
+      color: white;
+    }
+
+    .card {
+      background: linear-gradient(145deg, rgba(46,26,15,0.85), rgba(26,13,6,0.95));
+      backdrop-filter: blur(15px);
+      border-radius: var(--radius);
+      padding: 25px;
+      border: 1px solid rgba(255,138,101,0.2);
+      margin-bottom: 20px;
+    }
+
+    .options-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 15px;
+    }
+    .option-card {
+      background: rgba(26,13,6,0.7);
+      padding: 20px;
+      border-radius: 16px;
+      border: 2px solid var(--border);
+      cursor: pointer;
+      text-align: center;
+      transition: var(--transition);
+    }
+    .option-card.selected {
+      border-color: var(--primary);
+      background: rgba(211,47,47,0.2);
+    }
+
+    .calendar-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 4px;
+    }
+    .calendar-day {
+      aspect-ratio: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(26,13,6,0.6);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    .calendar-day.disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
+    .calendar-day.selected {
+      background: var(--gradient);
+    }
+
+    /* Estilos para a barra de pesquisa */
+    .search-box {
+      margin-bottom: 20px;
+      display: flex;
+      gap: 10px;
+    }
+    .search-box input {
+      flex: 1;
+      margin-bottom: 0;
+    }
+
+    .menu-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 20px;
+    }
+    .menu-card {
+      background: rgba(26,13,6,0.7);
+      border-radius: 16px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      transition: var(--transition);
+    }
+    .menu-card:hover {
+      border-color: var(--primary);
+    }
+    .menu-card img {
+      width: 100%;
+      height: 120px;
+      object-fit: cover;
+    }
+    .menu-info {
+      padding: 15px;
+    }
+    .menu-actions {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 10px;
+    }
+
+    .cart-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .total-box {
+      text-align: right;
+      font-size: 1.2rem;
+      margin-top: 20px;
+    }
+
+    .modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.9);
+      backdrop-filter: blur(5px);
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+    .modal.active {
+      display: flex;
+    }
+    .modal-content {
+      background: var(--glass);
+      padding: 30px;
+      border-radius: var(--radius);
+      max-width: 500px;
+      width: 90%;
+      border: 1px solid rgba(255,138,101,0.3);
+    }
+
+    .toast {
+      position: fixed;
+      bottom: 30px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--secondary);
+      color: white;
+      padding: 14px 25px;
+      border-radius: 14px;
+      z-index: 2000;
+      border-left: 4px solid var(--primary);
+      animation: slideUp 0.3s;
+    }
+    @keyframes slideUp {
+      from { bottom: -80px; opacity: 0; }
+    }
+
+    /* Estatísticas */
+    .stat-box {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .stat-item {
+      background: rgba(0,0,0,0.3);
+      padding: 15px;
+      border-radius: 12px;
+      text-align: center;
+    }
+
+    .choice-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      margin-top: 30px;
+    }
+    @media(max-width:600px) {
+      .choice-grid { grid-template-columns: 1fr; }
+    }
+    .choice-card {
+      background: var(--glass);
+      backdrop-filter: blur(20px);
+      border-radius: var(--radius);
+      padding: 40px 25px;
+      border: 2px solid var(--border);
+      text-align: center;
+      cursor: pointer;
+      transition: var(--transition);
+      font-size: 1.5rem;
+      font-weight: bold;
+    }
+    .choice-card:hover {
+      border-color: var(--primary);
+      transform: translateY(-5px);
+      box-shadow: 0 20px 40px rgba(211,47,47,0.3);
+    }
+    .choice-card i {
+      font-size: 3rem;
+      margin-bottom: 15px;
+      color: var(--primary);
+    }
+
+    /* Admin: menu item */
+    .admin-menu-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 5px;
+      border-bottom: 1px solid var(--border);
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .admin-menu-item .item-info {
+      flex: 1;
+      min-width: 120px;
+    }
+    .admin-menu-actions {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 0.7rem;
+      font-weight: bold;
+      vertical-align: middle;
+    }
+    .badge-active {
+      background: #2E7D32;
+      color: white;
+    }
+    .badge-inactive {
+      background: #B71C1C;
+      color: white;
+    }
+
+    /* Config panel toggle */
+    .config-panel {
+      display: none;
+      margin-bottom: 20px;
+    }
+    .config-panel.open {
+      display: block;
+    }
+
+    /* Dashboard principal admin: duas colunas */
+    .dashboard-row {
+      display: flex;
+      gap: 20px;
+      margin-bottom: 20px;
+    }
+    .dashboard-col {
+      flex: 1;
+      min-width: 280px;
+    }
+    @media(max-width:768px) {
+      .dashboard-row {
+        flex-direction: column;
+      }
+    }
+
+    .whatsapp-float {
+      position: fixed;
+      bottom: 80px;
+      right: 30px;
+      width: 68px;
+      height: 68px;
+      background: #25D366;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.5);
+      z-index: 1500;
+      transition: transform 0.3s, box-shadow 0.3s;
+      cursor: pointer;
+      text-decoration: none;
+    }
+    .whatsapp-float:hover {
+      transform: scale(1.1);
+      box-shadow: 0 10px 30px rgba(37,211,102,0.6);
+    }
+    .whatsapp-float i {
+      font-size: 34px;
+      color: white;
+    }
+    @media(max-width:600px) {
+      .whatsapp-float {
+        width: 60px;
+        height: 60px;
+        bottom: 70px;
+        right: 20px;
+      }
+      .whatsapp-float i {
+        font-size: 30px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="loader" class="loader"><div class="spinner"></div></div>
+
+  <!-- LOGIN -->
+  <div id="loginScreen" class="login-screen">
+    <div class="login-box">
+      <img id="loginLogo" class="login-logo" src="" alt="Logo" style="display:none;">
+      <h1>🍕 Bella Napoli</h1>
+      <div class="tabs">
+        <div class="tab active" id="tabEntrar" onclick="switchTab('login')">Entrar</div>
+        <div class="tab" id="tabCriar" onclick="switchTab('register')">Criar Conta</div>
+      </div>
+      <div id="loginForm">
+        <input type="email" id="loginEmail" placeholder="E-mail" autocomplete="email">
+        <input type="password" id="loginPassword" placeholder="Senha" autocomplete="current-password">
+        <button class="btn btn-primary" onclick="clientLogin()">Entrar</button>
+      </div>
+      <div id="registerForm" style="display:none;">
+        <div style="background:rgba(211,47,47,0.15); padding:10px; border-radius:10px; margin-bottom:15px; color:#FFAB91;">
+          📍 Entregamos em <strong>São Paulo - SP</strong> e região metropolitana.
+        </div>
+        <input type="text" id="regName" placeholder="Nome completo" autocomplete="name">
+        <input type="email" id="regEmail" placeholder="E-mail" autocomplete="email">
+        <input type="password" id="regPassword" placeholder="Senha (mín. 6 caracteres)" autocomplete="new-password">
+        <input type="tel" id="regWhatsapp" placeholder="WhatsApp com DDD (ex: 11999999999)">
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+          <input type="text" id="regCity" placeholder="Cidade" autocomplete="address-level2">
+          <input type="text" id="regNeighborhood" placeholder="Bairro" autocomplete="address-level3">
+          <input type="text" id="regStreet" placeholder="Rua" autocomplete="address-line1">
+          <input type="text" id="regNumber" placeholder="Número" autocomplete="address-line2">
+        </div>
+        <button class="btn btn-primary" onclick="clientRegister()">Criar Conta</button>
+      </div>
+      <div id="loginError" style="color:#EF5350; margin-top:10px; display:none;"></div>
+    </div>
+    <div style="position:fixed; bottom:20px; right:20px;">
+      <button style="background:rgba(0,0,0,0.5); border:1px solid #4E342E; color:#8D6E63; padding:8px 14px; border-radius:20px; cursor:pointer;" onclick="openAdminModal()">🔒 Admin</button>
+    </div>
+  </div>
+
+  <!-- CLIENTE -->
+  <div id="clientScreen" class="screen">
+    <div class="header">
+      <h1 style="cursor:pointer;" onclick="goHome()">🍕 Bella Napoli</h1>
+      <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+        <span id="userNameDisplay" style="font-weight:bold;"></span>
+        <button class="nav-btn" id="tabReserva" onclick="switchClientMode('reserva')">Reserva</button>
+        <button class="nav-btn" id="tabDelivery" onclick="switchClientMode('delivery')">Delivery</button>
+        <button class="nav-btn" id="tabAgendamentos" onclick="switchClientMode('agendamentos')">📅 Meus Agendamentos</button>
+        <button class="btn btn-secondary" onclick="clientLogout()">Sair</button>
+      </div>
+    </div>
+
+    <div id="homeSection" class="card" style="text-align:center;">
+      <h2 style="color:var(--primary); margin-bottom:10px;">O que deseja fazer hoje?</h2>
+      <div class="choice-grid">
+        <div class="choice-card" onclick="switchClientMode('reserva')">
+          <i class="fas fa-utensils"></i><br>🍽️ Reservar Mesa
+        </div>
+        <div class="choice-card" onclick="switchClientMode('delivery')">
+          <i class="fas fa-motorcycle"></i><br>🛵 Pedir Delivery
+        </div>
+      </div>
+    </div>
+
+    <div id="reservaSection" style="display:none;">
+      <div class="card" id="peopleCard">
+        <h2 style="color:var(--primary); margin-bottom:15px;">Reserva de Mesa</h2>
+        <div class="options-grid" id="peopleGrid">
+          <div class="option-card selected" onclick="selectPeople(event, 2)">👥 2 pessoas</div>
+          <div class="option-card" onclick="selectPeople(event, 4)">👥 4 pessoas</div>
+          <div class="option-card" onclick="selectPeople(event, 6)">👥 6 pessoas</div>
+          <div class="option-card" onclick="selectPeople(event, 8)">👥 8+ pessoas</div>
+        </div>
+        <button class="btn btn-primary" id="nextToDate" onclick="goReservaStep('date')" style="margin-top:20px;">Próximo →</button>
+      </div>
+      <div class="card" id="dateSection" style="display:none;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+          <button class="btn btn-secondary" onclick="changeMonth(-1)">◀</button>
+          <h4 id="currentMonthYear" style="color:white;"></h4>
+          <button class="btn btn-secondary" onclick="changeMonth(1)">▶</button>
+        </div>
+        <div class="calendar-grid" id="calendarDays"></div>
+        <div style="display:flex; justify-content:space-between; margin-top:20px;">
+          <button class="btn btn-secondary" onclick="goReservaStep('people')">Voltar</button>
+          <button class="btn btn-primary" id="nextToHour" disabled onclick="goReservaStep('hour')">Próximo →</button>
+        </div>
+      </div>
+      <div class="card" id="hourSection" style="display:none;">
+        <h3 style="color:white; margin-bottom:15px;">Horários disponíveis para <span id="selectedDateDisplay"></span></h3>
+        <div class="options-grid" id="hoursGrid"></div>
+        <div style="display:flex; justify-content:space-between; margin-top:20px;">
+          <button class="btn btn-secondary" onclick="goReservaStep('date')">Voltar</button>
+          <button class="btn btn-primary" id="confirmReserva" disabled onclick="confirmReservation()">Confirmar Reserva</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="deliverySection" style="display:none;">
+      <div class="card">
+        <h2 style="color:var(--primary); margin-bottom:15px;">📋 Cardápio</h2>
+        <!-- BARRA DE PESQUISA -->
+        <div class="search-box">
+          <input type="text" id="searchMenuInput" placeholder="🔍 Buscar pizza, bebida, sobremesa..." oninput="filterMenu()">
+        </div>
+        <div class="menu-grid" id="menuGrid"></div>
+      </div>
+      <div class="card" id="cartCard">
+        <h2 style="color:var(--primary);">🛒 Carrinho</h2>
+        <div id="cartItems">Seu carrinho está vazio.</div>
+        <div class="total-box">
+          <p>Subtotal: <strong id="subtotal">R$ 0.00</strong></p>
+          <p>Taxa de entrega: <strong id="deliveryFee">R$ 0.00</strong></p>
+          <h3>Total: <strong id="totalPrice">R$ 0.00</strong></h3>
+        </div>
+        <button class="btn btn-primary" id="checkoutBtn" disabled onclick="placeOrder()">Finalizar Pedido</button>
+      </div>
+      <div class="card">
+        <h2 style="color:var(--primary);">📦 Meus Pedidos</h2>
+        <div id="orderHistory"></div>
+      </div>
+    </div>
+
+    <!-- NOVA SEÇÃO: MEUS AGENDAMENTOS (comprovante) -->
+    <div id="agendamentosSection" style="display:none;">
+      <div class="card">
+        <h2 style="color:var(--primary); margin-bottom:15px;">📅 Minhas Reservas (ativas)</h2>
+        <div id="myReservationsList">Carregando...</div>
+      </div>
+      <div class="card">
+        <h2 style="color:var(--primary); margin-bottom:15px;">🛵 Meus Pedidos (pendentes)</h2>
+        <div id="myActiveOrdersList">Carregando...</div>
+      </div>
+      <p style="font-size:0.8rem; text-align:center; color:var(--text-secondary);">✔️ Reservas e pedidos são automaticamente removidos 1 dia após a data ou entrega.</p>
+    </div>
+  </div>
+
+  <!-- ADMIN -->
+  <div id="adminScreen" class="screen">
+    <div class="header">
+      <h1>🔧 Painel Admin</h1>
+      <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+        <span id="adminEmailDisplay"></span>
+        <button id="btnConfigToggle" class="btn btn-secondary" onclick="toggleConfigPanel()">⚙️ Configurações</button>
+        <button class="btn btn-secondary" onclick="adminLogout()">Sair</button>
+      </div>
+    </div>
+
+    <!-- Estatísticas -->
+    <div class="stat-box">
+      <div class="stat-item"><h4>Reservas Hoje</h4><div id="statReservas">0</div></div>
+      <div class="stat-item"><h4>Pedidos Hoje</h4><div id="statPedidos">0</div></div>
+      <div class="stat-item"><h4>Clientes</h4><div id="statClients">0</div></div>
+    </div>
+
+    <!-- Painel de configurações expansível -->
+    <div id="configPanel" class="config-panel">
+      <div class="card">
+        <h3 style="color:var(--primary);">⚙️ Configurações</h3>
+        <label>Horário Reservas</label>
+        <div style="display:flex; gap:10px;">
+          <input type="time" id="reservaOpen" style="flex:1;">
+          <input type="time" id="reservaClose" style="flex:1;">
+        </div>
+        <label>Horário Delivery</label>
+        <div style="display:flex; gap:10px;">
+          <input type="time" id="deliveryOpen" style="flex:1;">
+          <input type="time" id="deliveryClose" style="flex:1;">
+        </div>
+        <label>Capacidade (pessoas/horário)</label>
+        <input type="number" id="capacityInput" min="1" value="20">
+        <label>Taxa de Entrega (R$)</label>
+        <input type="number" id="feeInput" step="0.01" value="5.00">
+        <label>Pedido Mínimo (R$)</label>
+        <input type="number" id="minOrderInput" step="0.01" value="20.00">
+        <button class="btn btn-primary" onclick="saveSettings()">Salvar Configurações</button>
+      </div>
+    </div>
+
+    <!-- Linha principal: Pedidos e Reservas lado a lado -->
+    <div class="dashboard-row">
+      <div class="dashboard-col">
+        <div class="card">
+          <h3 style="color:var(--primary);">📦 Pedidos Recentes</h3>
+          <div id="adminOrders" style="max-height:400px; overflow-y:auto;"></div>
+        </div>
+      </div>
+      <div class="dashboard-col">
+        <div class="card">
+          <h3 style="color:var(--primary);">📅 Reservas</h3>
+          <div id="adminReservations" style="max-height:400px; overflow-y:auto;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Cardápio em largura total -->
+    <div class="card">
+      <h3 style="color:var(--primary);">📋 Cardápio</h3>
+      <div id="adminMenuList" style="max-height:350px; overflow-y:auto;"></div>
+      <button class="btn btn-primary" onclick="addMenuItem()" style="margin-top:10px;">Adicionar Item</button>
+    </div>
+  </div>
+
+  <div id="adminLoginModal" class="modal">
+    <div class="modal-content">
+      <h3>Login Administrativo</h3>
+      <input type="email" id="adminEmail" placeholder="E-mail admin" autocomplete="email">
+      <input type="password" id="adminPassword" placeholder="Senha" autocomplete="current-password">
+      <button class="btn btn-primary" onclick="adminLogin()">Entrar</button>
+      <button class="btn btn-secondary" onclick="closeAdminModal()">Cancelar</button>
+      <div id="adminLoginError" style="color:#EF5350; margin-top:10px; display:none;"></div>
+    </div>
+  </div>
+
+  <a id="whatsappFloat" class="whatsapp-float" href="https://wa.me/5511999999999" target="_blank" title="Fale conosco">
+    <i class="fab fa-whatsapp"></i>
+  </a>
+
+  <script type="module">
+    import { initializeApp } from 'firebase/app';
+    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth';
+    import { getFirestore, collection, doc, getDocs, getDoc, addDoc, updateDoc, deleteDoc, query, where, orderBy, setDoc, Timestamp, onSnapshot } from 'firebase/firestore';
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyBkP1TUYfJyUOT--l-zzyQb_UZSdRn9PiQ",
+      authDomain: "pizzapremium-adb2b.firebaseapp.com",
+      projectId: "pizzapremium-adb2b",
+      storageBucket: "pizzapremium-adb2b.firebasestorage.app",
+      messagingSenderId: "177679058684",
+      appId: "1:177679058684:web:6e821789d223bfa1ee3979"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    const whatsappLink = "https://wa.me/5511999999999";
+    document.getElementById('whatsappFloat').href = whatsappLink;
+
+    const ADMIN_EMAILS = ['admin@pizzabella.com', 'seuemail@admin.com'];
+
+    let currentUser = null,
+        currentAdmin = null;
+    let settings = {
+      reservaOpen: '18:00',
+      reservaClose: '23:00',
+      deliveryOpen: '11:00',
+      deliveryClose: '22:00',
+      capacity: 20,
+      deliveryFee: 5.00,
+      minOrder: 20.00
+    };
+    let menuItems = [],
+        cart = [];
+    let selectedPeople = 2,
+        selectedDate = null,
+        selectedHour = null;
+    let currentMonth = new Date();
+    let clientMode = null;
+    let currentFilter = ''; // para a pesquisa
+
+    // Para notificações em tempo real (admin)
+    let adminLoginTime = null;
+    let unsubOrders = null;
+    let unsubReservations = null;
+
+    /* ---------- UTILITÁRIOS ---------- */
+    function toast(msg, isError = false) {
+      const t = document.createElement('div');
+      t.className = 'toast';
+      t.style.borderLeftColor = isError ? '#EF5350' : '#4CAF50';
+      t.textContent = msg;
+      document.body.appendChild(t);
+      setTimeout(() => t.remove(), 3000);
+    }
+
+    function showError(msg, id = 'loginError') {
+      const el = document.getElementById(id);
+      if (el) {
+        el.textContent = msg;
+        el.style.display = 'block';
+        setTimeout(() => el.style.display = 'none', 4000);
+      }
+    }
+
+    function hideLoader() { document.getElementById('loader').classList.add('hide'); }
+    function showLoader() { document.getElementById('loader').classList.remove('hide'); }
+
+    function formatDate(dateString) {
+      if (!dateString) return '';
+      const parts = dateString.split('-');
+      return parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : dateString;
+    }
+
+    function localDateString(date) {
+      return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
+    }
+
+    /* ---------- LIMPEZA AUTOMÁTICA DE DADOS ANTIGOS (1 DIA) ---------- */
+    async function cleanUserOldData() {
+      if (!currentUser) return;
+      const today = new Date();
+      const oneDayAgo = new Date(today);
+      oneDayAgo.setDate(oneDayAgo.getDate() - 1);
+      const oneDayAgoStr = localDateString(oneDayAgo);
+
+      try {
+        // Reservas: apagar reservas cuja data (day) seja menor que hoje - 1 dia
+        const reservationsSnap = await getDocs(query(collection(db, 'reservations'), where('userId', '==', currentUser.id)));
+        const toDeleteRes = reservationsSnap.docs.filter(doc => {
+          const resDay = doc.data().day;
+          return resDay < oneDayAgoStr;
+        });
+        for (const docRef of toDeleteRes) {
+          await deleteDoc(docRef.ref);
+          console.log(`Reserva antiga removida: ${docRef.id}`);
+        }
+
+        // Pedidos: apagar pedidos com status 'entregue' e createdAt < oneDayAgo
+        const ordersSnap = await getDocs(query(collection(db, 'orders'), where('userId', '==', currentUser.id)));
+        const toDeleteOrders = ordersSnap.docs.filter(doc => {
+          const data = doc.data();
+          if (data.status !== 'entregue') return false;
+          if (!data.createdAt) return false;
+          const createdAtDate = data.createdAt.toDate();
+          return createdAtDate < oneDayAgo;
+        });
+        for (const docRef of toDeleteOrders) {
+          await deleteDoc(docRef.ref);
+          console.log(`Pedido entregue antigo removido: ${docRef.id}`);
+        }
+      } catch (err) {
+        console.warn('Erro na limpeza automática:', err);
+        // Não exibir toast para o usuário para não incomodar
+      }
+    }
+
+    /* ---------- EXIBIR MEUS AGENDAMENTOS (RESERVAS + PEDIDOS ATIVOS) ---------- */
+    async function loadMyAgendamentos() {
+      if (!currentUser) return;
+      try {
+        // Reservas ativas (futuras ou hoje e não canceladas)
+        const todayStr = localDateString(new Date());
+        const reservationsSnap = await getDocs(query(collection(db, 'reservations'), where('userId', '==', currentUser.id)));
+        let reservas = reservationsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+        reservas = reservas.filter(r => r.day >= todayStr && r.status !== 'cancelled');
+        reservas.sort((a,b) => a.day.localeCompare(b.day) || a.hour.localeCompare(b.hour));
+
+        const reservasHtml = reservas.map(r => `
+          <div style="padding:8px 0; border-bottom:1px solid var(--border); display:flex; justify-content:space-between;">
+            <span><strong>${formatDate(r.day)}</strong> às ${r.hour} – ${r.people} pessoa(s)</span>
+            <span style="color:var(--primary);">${r.status === 'confirmed' ? '✓ Confirmada' : r.status}</span>
+          </div>
+        `).join('');
+        document.getElementById('myReservationsList').innerHTML = reservasHtml || '<p style="color:var(--text-secondary);">Nenhuma reserva ativa.</p>';
+
+        // Pedidos ativos (não entregues e não cancelados)
+        const ordersSnap = await getDocs(query(collection(db, 'orders'), where('userId', '==', currentUser.id)));
+        let pedidos = ordersSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+        pedidos = pedidos.filter(p => p.status !== 'entregue' && p.status !== 'cancelled');
+        pedidos.sort((a,b) => {
+          const da = a.createdAt?.toDate() || new Date(0);
+          const db = b.createdAt?.toDate() || new Date(0);
+          return db - da;
+        });
+        const pedidosHtml = pedidos.map(p => {
+          const dateStr = p.createdAt?.toDate() ? p.createdAt.toDate().toLocaleDateString('pt-BR') : '';
+          return `
+            <div style="padding:8px 0; border-bottom:1px solid var(--border); display:flex; justify-content:space-between;">
+              <span><strong>Pedido #${p.id.slice(-5)}</strong> - ${dateStr}<br>Total: R$ ${p.total?.toFixed(2)}</span>
+              <span style="color:var(--primary);">${p.status === 'pending' ? '⏳ Pendente' : p.status}</span>
+            </div>
+          `;
+        }).join('');
+        document.getElementById('myActiveOrdersList').innerHTML = pedidosHtml || '<p style="color:var(--text-secondary);">Nenhum pedido ativo.</p>';
+      } catch (err) {
+        console.error('Erro ao carregar agendamentos:', err);
+        document.getElementById('myReservationsList').innerHTML = '<p style="color:#EF5350;">Erro ao carregar reservas.</p>';
+        document.getElementById('myActiveOrdersList').innerHTML = '<p style="color:#EF5350;">Erro ao carregar pedidos.</p>';
+      }
+    }
+
+    /* ---------- NOTIFICAÇÕES ADMIN ---------- */
+    async function requestNotificationPermission() {
+      if (!("Notification" in window)) {
+        console.warn("Notificações não suportadas");
+        return false;
+      }
+      if (Notification.permission === "granted") return true;
+      if (Notification.permission !== "denied") {
+        const permission = await Notification.requestPermission();
+        return permission === "granted";
+      }
+      return false;
+    }
+
+    function showBrowserNotification(title, body) {
+      if (Notification.permission === "granted") {
+        new Notification(title, { body, icon: '🍕' });
+      }
+    }
+
+    function startRealtimeListeners() {
+      if (!currentAdmin) return;
+      adminLoginTime = Timestamp.now();
+
+      const ordersQuery = query(collection(db, 'orders'), where('createdAt', '>=', adminLoginTime));
+      unsubOrders = onSnapshot(ordersQuery, (snapshot) => {
+        snapshot.docChanges().forEach(change => {
+          if (change.type === 'added') {
+            const order = change.doc.data();
+            showBrowserNotification('🛵 Novo Pedido!', `${order.userName} fez um pedido de R$ ${order.total?.toFixed(2)}`);
+          }
+        });
+      });
+
+      const reservationsQuery = query(collection(db, 'reservations'), where('createdAt', '>=', adminLoginTime));
+      unsubReservations = onSnapshot(reservationsQuery, (snapshot) => {
+        snapshot.docChanges().forEach(change => {
+          if (change.type === 'added') {
+            const reservation = change.doc.data();
+            showBrowserNotification('📅 Nova Reserva!', `${reservation.userName} reservou para ${formatDate(reservation.day)} às ${reservation.hour} (${reservation.people}p)`);
+          }
+        });
+      });
+    }
+
+    function stopRealtimeListeners() {
+      if (unsubOrders) { unsubOrders(); unsubOrders = null; }
+      if (unsubReservations) { unsubReservations(); unsubReservations = null; }
+    }
+
+    /* ---------- TOGGLE CONFIG ADMIN ---------- */
+    window.toggleConfigPanel = () => {
+      const panel = document.getElementById('configPanel');
+      panel.classList.toggle('open');
+    };
+
+    /* ---------- ABAS DO LOGIN ---------- */
+    window.switchTab = (tab) => {
+      document.getElementById('tabEntrar').classList.toggle('active', tab === 'login');
+      document.getElementById('tabCriar').classList.toggle('active', tab === 'register');
+      document.getElementById('loginForm').style.display = tab === 'login' ? 'block' : 'none';
+      document.getElementById('registerForm').style.display = tab === 'register' ? 'block' : 'none';
+      document.getElementById('loginError').style.display = 'none';
+    };
+
+    /* ---------- NAVEGAÇÃO DO CLIENTE (agora com 'agendamentos') ---------- */
+    window.goHome = () => switchClientMode(null);
+    window.switchClientMode = (mode) => {
+      clientMode = mode;
+      document.getElementById('homeSection').style.display = mode ? 'none' : 'block';
+      document.getElementById('reservaSection').style.display = mode === 'reserva' ? 'block' : 'none';
+      document.getElementById('deliverySection').style.display = mode === 'delivery' ? 'block' : 'none';
+      document.getElementById('agendamentosSection').style.display = mode === 'agendamentos' ? 'block' : 'none';
+      document.getElementById('tabReserva').classList.toggle('active', mode === 'reserva');
+      document.getElementById('tabDelivery').classList.toggle('active', mode === 'delivery');
+      document.getElementById('tabAgendamentos').classList.toggle('active', mode === 'agendamentos');
+      if (mode === 'reserva') {
+        document.getElementById('peopleCard').style.display = 'block';
+        document.getElementById('dateSection').style.display = 'none';
+        document.getElementById('hourSection').style.display = 'none';
+      }
+      if (mode === 'delivery') {
+        renderMenu(); // renderiza com filtro atual
+      }
+      if (mode === 'agendamentos') {
+        loadMyAgendamentos();
+      }
+    };
+
+    /* ---------- AUTENTICAÇÃO ---------- */
+    window.clientLogin = async () => {
+      const email = document.getElementById('loginEmail').value.trim();
+      const password = document.getElementById('loginPassword').value;
+      if (!email || !password) return showError('Preencha todos os campos.');
+      showLoader();
+      try {
+        await signInWithEmailAndPassword(auth, email, password);
+      } catch (ex) {
+        hideLoader();
+        const msg = (ex.code === 'auth/invalid-credential' || ex.code === 'auth/user-not-found' || ex.code === 'auth/wrong-password')
+          ? 'E-mail ou senha incorretos.'
+          : 'Erro: ' + ex.message;
+        showError(msg);
+      }
+    };
+
+    window.clientRegister = async () => {
+      const name = document.getElementById('regName').value.trim();
+      const email = document.getElementById('regEmail').value.trim();
+      const pass = document.getElementById('regPassword').value;
+      const waRaw = document.getElementById('regWhatsapp').value.replace(/\D/g, '');
+      const city = document.getElementById('regCity').value.trim();
+      const neighborhood = document.getElementById('regNeighborhood').value.trim();
+      const street = document.getElementById('regStreet').value.trim();
+      const number = document.getElementById('regNumber').value.trim();
+
+      if (!name || !email || !pass || pass.length < 6 || waRaw.length < 10 || waRaw.length > 11 || !city || !neighborhood || !street || !number) {
+        return showError('Preencha todos os campos corretamente. O WhatsApp deve ter DDD + número (10 ou 11 dígitos).');
+      }
+      showLoader();
+      try {
+        const uc = await createUserWithEmailAndPassword(auth, email, pass);
+        await setDoc(doc(db, 'users', uc.user.uid), {
+          name, email, whatsapp: waRaw,
+          address: { city, neighborhood, street, number },
+          createdAt: Timestamp.now()
+        });
+        toast('Conta criada com sucesso!');
+      } catch (ex) {
+        hideLoader();
+        if (ex.code === 'auth/email-already-in-use') showError('Este e-mail já está cadastrado.');
+        else if (ex.code === 'auth/weak-password') showError('A senha deve ter pelo menos 6 caracteres.');
+        else showError('Erro: ' + ex.message);
+      }
+    };
+
+    window.clientLogout = () => signOut(auth);
+    window.adminLogout = () => {
+      stopRealtimeListeners();
+      signOut(auth);
+    };
+
+    /* ---------- MODAL ADMIN ---------- */
+    window.openAdminModal = () => document.getElementById('adminLoginModal').classList.add('active');
+    window.closeAdminModal = () => {
+      document.getElementById('adminLoginModal').classList.remove('active');
+      document.getElementById('adminLoginError').style.display = 'none';
+    };
+
+    window.adminLogin = async () => {
+      const email = document.getElementById('adminEmail').value.trim();
+      const password = document.getElementById('adminPassword').value;
+      if (!email || !password) return showError('Preencha os campos.', 'adminLoginError');
+      showLoader();
+      try {
+        await signInWithEmailAndPassword(auth, email, password);
+        document.getElementById('adminLoginModal').classList.remove('active');
+      } catch (ex) {
+        hideLoader();
+        showError('Credenciais inválidas.', 'adminLoginError');
+      }
+    };
+
+    /* ---------- OBSERVER DE AUTENTICAÇÃO ---------- */
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        currentUser = null;
+        currentAdmin = null;
+        clientMode = null;
+        cart = [];
+        stopRealtimeListeners();
+        document.getElementById('loginScreen').style.display = 'flex';
+        document.getElementById('clientScreen').classList.remove('active');
+        document.getElementById('adminScreen').classList.remove('active');
+        hideLoader();
+        return;
+      }
+
+      try {
+        let isAdmin = false;
+        try {
+          const adminDoc = await getDoc(doc(db, 'admins', user.uid));
+          isAdmin = adminDoc.exists();
+        } catch {
+          isAdmin = ADMIN_EMAILS.includes(user.email);
+        }
+
+        if (isAdmin) {
+          currentAdmin = { id: user.uid, email: user.email };
+          currentUser = null;
+          document.getElementById('loginScreen').style.display = 'none';
+          document.getElementById('clientScreen').classList.remove('active');
+          document.getElementById('adminScreen').classList.add('active');
+          document.getElementById('adminEmailDisplay').textContent = user.email;
+          document.getElementById('configPanel').classList.remove('open');
+          closeAdminModal();
+          await requestNotificationPermission();
+          startRealtimeListeners();
+          try {
+            await loadAdminData();
+          } catch (e) {
+            console.warn('Erro ao carregar dados do admin:', e);
+            toast('Alguns dados do painel não puderam ser carregados.', true);
+          }
+          hideLoader();
+          return;
+        }
+
+        // Usuário comum
+        let userProfile = { name: 'Usuário', email: user.email, address: {} };
+        try {
+          const userDocSnap = await getDoc(doc(db, 'users', user.uid));
+          if (userDocSnap.exists()) {
+            userProfile = { id: user.uid, ...userDocSnap.data() };
+          } else {
+            try {
+              await setDoc(doc(db, 'users', user.uid), {
+                name: user.displayName || 'Usuário',
+                email: user.email,
+                createdAt: Timestamp.now()
+              });
+              userProfile.name = user.displayName || 'Usuário';
+            } catch (createError) {
+              console.warn('Não foi possível criar documento do usuário:', createError);
+            }
+          }
+        } catch (readError) {
+          console.warn('Erro ao ler documento do usuário, usando perfil local:', readError);
+        }
+
+        currentUser = { id: user.uid, ...userProfile };
+        document.getElementById('loginScreen').style.display = 'none';
+        document.getElementById('adminScreen').classList.remove('active');
+        document.getElementById('clientScreen').classList.add('active');
+        document.getElementById('userNameDisplay').textContent = currentUser.name;
+        switchClientMode(null);
+        try {
+          await loadClientData();
+          await cleanUserOldData();      // limpeza automática ao logar
+          await loadMyAgendamentos();    // já carrega se necessário
+        } catch (e) {
+          console.warn('Erro ao carregar dados do cliente:', e);
+          toast('Alguns dados não puderam ser carregados.', true);
+        }
+        hideLoader();
+      } catch (err) {
+        console.error('Erro crítico no observer:', err);
+        hideLoader();
+        if (user) {
+          currentUser = { id: user.uid, name: 'Usuário', email: user.email, address: {} };
+          document.getElementById('loginScreen').style.display = 'none';
+          document.getElementById('clientScreen').classList.add('active');
+          document.getElementById('userNameDisplay').textContent = 'Usuário';
+          switchClientMode(null);
+        } else {
+          await signOut(auth);
+        }
+      }
+    });
+
+    /* ---------- DADOS DO CLIENTE ---------- */
+    async function loadClientData() {
+      const snap = await getDoc(doc(db, 'settings', 'general'));
+      if (snap.exists()) settings = { ...settings, ...snap.data() };
+      const menuSnap = await getDocs(query(collection(db, 'menu'), where('active', '==', true)));
+      menuItems = menuSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+      renderMenu();
+      updateCartDisplay();
+      loadMyOrders();
+    }
+
+    /* ---------- PESQUISA NO CARDÁPIO ---------- */
+    window.filterMenu = () => {
+      currentFilter = document.getElementById('searchMenuInput').value.toLowerCase();
+      renderMenu();
+    };
+
+    function renderMenu() {
+      const grid = document.getElementById('menuGrid');
+      if (!grid) return;
+      let filtered = menuItems;
+      if (currentFilter) {
+        filtered = menuItems.filter(item => item.name.toLowerCase().includes(currentFilter) || (item.description && item.description.toLowerCase().includes(currentFilter)));
+      }
+      grid.innerHTML = filtered.map(item => `
+        <div class="menu-card">
+          ${item.imageUrl ? `<img src="${item.imageUrl}" alt="${item.name}">` : '<div style="height:120px; background:#3E2723; display:flex; align-items:center; justify-content:center; font-size:2rem;">🍕</div>'}
+          <div class="menu-info">
+            <h4>${item.name}</h4>
+            <p style="color:var(--text-secondary);">${item.description || ''}</p>
+            <div class="menu-actions">
+              <strong>R$ ${item.price.toFixed(2)}</strong>
+              <button class="btn btn-primary" onclick="addToCart('${item.id}')">+</button>
+            </div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    window.addToCart = (id) => {
+      const item = menuItems.find(i => i.id === id);
+      if (!item) return;
+      const existing = cart.find(i => i.id === id);
+      if (existing) existing.qty++;
+      else cart.push({ ...item, qty: 1 });
+      updateCartDisplay();
+    };
+
+    window.removeFromCart = (id) => {
+      cart = cart.filter(i => i.id !== id);
+      updateCartDisplay();
+    };
+
+    function updateCartDisplay() {
+      const container = document.getElementById('cartItems');
+      if (!container) return;
+      if (cart.length === 0) {
+        container.innerHTML = '<p style="color:var(--text-secondary);">Seu carrinho está vazio.</p>';
+      } else {
+        container.innerHTML = cart.map(item => `
+          <div class="cart-item">
+            <span>${item.name} x${item.qty}</span>
+            <span>R$ ${(item.price * item.qty).toFixed(2)}</span>
+            <button class="btn btn-danger" style="padding:5px 10px; font-size:12px;" onclick="removeFromCart('${item.id}')">X</button>
+          </div>
+        `).join('');
+      }
+      const subtotal = cart.reduce((s, i) => s + (i.price || 0) * (i.qty || 0), 0);
+      const fee = subtotal >= settings.minOrder ? settings.deliveryFee : 0;
+      document.getElementById('subtotal').textContent = `R$ ${subtotal.toFixed(2)}`;
+      document.getElementById('deliveryFee').textContent = `R$ ${fee.toFixed(2)}`;
+      document.getElementById('totalPrice').textContent = `R$ ${(subtotal + fee).toFixed(2)}`;
+      document.getElementById('checkoutBtn').disabled = cart.length === 0;
+    }
+
+    window.placeOrder = async () => {
+      if (cart.length === 0) return;
+      const subtotal = cart.reduce((s, i) => s + (i.price || 0) * (i.qty || 0), 0);
+      const fee = subtotal >= settings.minOrder ? settings.deliveryFee : 0;
+      showLoader();
+      try {
+        await addDoc(collection(db, 'orders'), {
+          userId: currentUser.id,
+          userName: currentUser.name,
+          address: currentUser.address,
+          items: cart.map(i => ({ id: i.id, name: i.name, price: i.price, qty: i.qty })),
+          subtotal,
+          deliveryFee: fee,
+          total: subtotal + fee,
+          status: 'pending',
+          createdAt: Timestamp.now()
+        });
+        cart = [];
+        updateCartDisplay();
+        toast('Pedido realizado com sucesso! 🛵');
+        loadMyOrders();
+        if (clientMode === 'agendamentos') loadMyAgendamentos(); // atualiza se estiver na tela
+      } catch (e) {
+        toast('Erro ao fazer pedido.', true);
+      } finally {
+        hideLoader();
+      }
+    };
+
+    async function loadMyOrders() {
+      const container = document.getElementById('orderHistory');
+      if (!container) return;
+      try {
+        const snap = await getDocs(query(collection(db, 'orders'), where('userId', '==', currentUser.id)));
+        let orders = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        orders = orders.filter(o => o.status !== 'entregue' && o.status !== 'cancelled');
+        orders.sort((a, b) => {
+          const dateA = a.createdAt?.toDate ? a.createdAt.toDate().getTime() : 0;
+          const dateB = b.createdAt?.toDate ? b.createdAt.toDate().getTime() : 0;
+          return dateB - dateA;
+        });
+        orders = orders.slice(0, 10);
+        container.innerHTML = orders.map(order => {
+          const dateStr = order.createdAt?.toDate ? order.createdAt.toDate().toISOString().split('T')[0] : '';
+          return `<div style="padding:8px 0; border-bottom:1px solid var(--border);">
+            <strong>Pedido #${order.id.slice(-5)}</strong> - ${formatDate(dateStr)}
+            - R$ ${order.total?.toFixed(2) ?? '0.00'} - <span style="color:var(--primary);">${order.status}</span>
+          </div>`;
+        }).join('') || '<p style="color:var(--text-secondary);">Nenhum pedido ativo.</p>';
+      } catch (e) {
+        container.innerHTML = '<p style="color:var(--text-secondary);">Erro ao carregar pedidos.</p>';
+      }
+    }
+
+    /* ---------- RESERVA (sem alterações, mas ao confirmar, atualiza a lista de agendamentos se visível) ---------- */
+    window.selectPeople = (event, n) => {
+      document.querySelectorAll('#peopleGrid .option-card').forEach(c => c.classList.remove('selected'));
+      event.currentTarget.classList.add('selected');
+      selectedPeople = n;
+    };
+
+    window.goReservaStep = (step) => {
+      if (step === 'people') {
+        document.getElementById('peopleCard').style.display = 'block';
+        document.getElementById('dateSection').style.display = 'none';
+        document.getElementById('hourSection').style.display = 'none';
+      } else if (step === 'date') {
+        document.getElementById('peopleCard').style.display = 'none';
+        document.getElementById('dateSection').style.display = 'block';
+        document.getElementById('hourSection').style.display = 'none';
+        document.getElementById('nextToHour').disabled = true;
+        selectedDate = null;
+        selectedHour = null;
+        renderCalendar();
+      } else if (step === 'hour') {
+        if (!selectedDate) return;
+        document.getElementById('peopleCard').style.display = 'none';
+        document.getElementById('dateSection').style.display = 'none';
+        document.getElementById('hourSection').style.display = 'block';
+        document.getElementById('selectedDateDisplay').textContent = formatDate(selectedDate);
+        document.getElementById('confirmReserva').disabled = true;
+        selectedHour = null;
+        loadHours();
+      }
+    };
+
+    function renderCalendar() {
+      const y = currentMonth.getFullYear(),
+            m = currentMonth.getMonth();
+      document.getElementById('currentMonthYear').textContent = new Date(y, m).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+      const firstDay = new Date(y, m, 1).getDay();
+      const daysInMonth = new Date(y, m + 1, 0).getDate();
+      let html = '';
+      for (let i = 0; i < firstDay; i++) html += '<div></div>';
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      for (let d = 1; d <= daysInMonth; d++) {
+        const dateObj = new Date(y, m, d);
+        const ds = `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+        const dow = dateObj.getDay();
+        const isDisabled = dow === 0 || dateObj < today;
+        html += `<div class="calendar-day ${isDisabled ? 'disabled' : ''} ${selectedDate === ds ? 'selected' : ''}" 
+                 ${!isDisabled ? `onclick="window.selectDate('${ds}')"` : ''}>${d}</div>`;
+      }
+      document.getElementById('calendarDays').innerHTML = html;
+    }
+
+    window.selectDate = (ds) => {
+      selectedDate = ds;
+      document.getElementById('nextToHour').disabled = false;
+      renderCalendar();
+    };
+
+    window.changeMonth = (delta) => {
+      currentMonth.setMonth(currentMonth.getMonth() + delta);
+      renderCalendar();
+    };
+
+    async function loadHours() {
+      try {
+        const [oh, om] = settings.reservaOpen.split(':').map(Number);
+        const [ch, cm] = settings.reservaClose.split(':').map(Number);
+        const openMin = oh * 60 + om,
+              closeMin = ch * 60 + cm;
+        const snap = await getDocs(query(collection(db, 'reservations'), where('day', '==', selectedDate), where('status', 'in', ['confirmed', 'pending'])));
+        const booked = snap.docs.map(d => d.data());
+        const now = new Date();
+        const todayStr = localDateString(now);
+        let html = '';
+        for (let t = openMin; t < closeMin; t += 30) {
+          const hour = `${String(Math.floor(t / 60)).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}`;
+          const totalPeople = booked.filter(r => r.hour === hour).reduce((s, r) => s + (r.people || 0), 0);
+          const isPast = (selectedDate === todayStr) && (t <= now.getHours() * 60 + now.getMinutes());
+          if (totalPeople + selectedPeople > settings.capacity || isPast) {
+            html += `<div class="option-card" style="opacity:0.5; cursor:not-allowed;">${hour} ${isPast ? '(passado)' : '(lotado)'}</div>`;
+          } else {
+            html += `<div class="option-card" onclick="window.selectHour(event, '${hour}')">${hour}</div>`;
+          }
+        }
+        document.getElementById('hoursGrid').innerHTML = html || '<p>Nenhum horário disponível.</p>';
+      } catch (err) {
+        console.error('Erro ao carregar horários:', err);
+        document.getElementById('hoursGrid').innerHTML = '<p style="color:#EF5350;">Erro ao carregar horários. Tente novamente.</p>';
+      }
+    }
+
+    window.selectHour = (event, h) => {
+      selectedHour = h;
+      document.getElementById('confirmReserva').disabled = false;
+      document.querySelectorAll('#hoursGrid .option-card').forEach(c => c.classList.remove('selected'));
+      event.currentTarget.classList.add('selected');
+    };
+
+    window.confirmReservation = async () => {
+      if (!selectedDate || !selectedHour) return toast('Selecione data e horário.', true);
+      showLoader();
+      try {
+        await addDoc(collection(db, 'reservations'), {
+          userId: currentUser.id,
+          userName: currentUser.name,
+          people: selectedPeople,
+          day: selectedDate,
+          hour: selectedHour,
+          status: 'confirmed',
+          createdAt: Timestamp.now()
+        });
+        toast('Reserva confirmada! 🎉');
+        selectedDate = null;
+        selectedHour = null;
+        document.getElementById('nextToHour').disabled = true;
+        document.getElementById('confirmReserva').disabled = true;
+        goReservaStep('people');
+        document.querySelectorAll('#peopleGrid .option-card').forEach(c => c.classList.remove('selected'));
+        selectedPeople = 2;
+        if (clientMode === 'agendamentos') loadMyAgendamentos(); // atualiza se estiver na tela
+      } catch (e) {
+        toast('Erro ao confirmar reserva.', true);
+      } finally {
+        hideLoader();
+      }
+    };
+
+    /* ---------- ADMIN DATA (inalterado) ---------- */
+    async function loadAdminData() {
+      const snap = await getDoc(doc(db, 'settings', 'general'));
+      if (snap.exists()) settings = { ...settings, ...snap.data() };
+      document.getElementById('reservaOpen').value = settings.reservaOpen;
+      document.getElementById('reservaClose').value = settings.reservaClose;
+      document.getElementById('deliveryOpen').value = settings.deliveryOpen;
+      document.getElementById('deliveryClose').value = settings.deliveryClose;
+      document.getElementById('capacityInput').value = settings.capacity;
+      document.getElementById('feeInput').value = settings.deliveryFee;
+      document.getElementById('minOrderInput').value = settings.minOrder;
+
+      const today = localDateString(new Date());
+      const resToday = await getDocs(query(collection(db, 'reservations'), where('day', '==', today)));
+      document.getElementById('statReservas').textContent = resToday.size;
+
+      const startOfToday = new Date(); startOfToday.setHours(0,0,0,0);
+      const ordersToday = await getDocs(query(collection(db, 'orders'), where('createdAt', '>=', Timestamp.fromDate(startOfToday))));
+      document.getElementById('statPedidos').textContent = ordersToday.size;
+
+      const users = await getDocs(collection(db, 'users'));
+      document.getElementById('statClients').textContent = users.size;
+
+      const menuSnap = await getDocs(collection(db, 'menu'));
+      const allMenu = menuSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+      document.getElementById('adminMenuList').innerHTML = allMenu.map(item => {
+        const isActive = item.active !== false;
+        return `<div class="admin-menu-item">
+          <div class="item-info">
+            <strong>${item.name}</strong> - R$ ${item.price.toFixed(2)}
+            <span class="badge ${isActive ? 'badge-active' : 'badge-inactive'}">${isActive ? 'ativo' : 'inativo'}</span>
+          </div>
+          <div class="admin-menu-actions">
+            <button class="btn btn-secondary" style="padding:5px 10px; font-size:12px;" onclick="editMenuItem('${item.id}')">✏️ Editar</button>
+            <button class="btn ${isActive ? 'btn-danger' : 'btn-success'}" style="padding:5px 10px; font-size:12px;" onclick="toggleMenuItem('${item.id}', ${isActive})">${isActive ? '🚫 Desativar' : '✅ Ativar'}</button>
+            <button class="btn btn-danger" style="padding:5px 10px; font-size:12px;" onclick="deleteMenuItem('${item.id}')">🗑️ Excluir</button>
+          </div>
+        </div>`;
+      }).join('') || '<p style="color:var(--text-secondary);">Nenhum item cadastrado.</p>';
+
+      const ordersSnap = await getDocs(query(collection(db, 'orders'), orderBy('createdAt', 'desc')));
+      const orders = ordersSnap.docs.map(d => ({ id: d.id, ...d.data() })).filter(o => o.status !== 'entregue');
+      document.getElementById('adminOrders').innerHTML = orders.map(o => {
+        return `<div style="padding:5px 0; display:flex; justify-content:space-between; align-items:center;">
+          <span>${o.userName} - R$ ${o.total?.toFixed(2) ?? '0.00'} - ${o.status}</span>
+          <button class="btn btn-success" style="padding:3px 10px; font-size:12px;" onclick="markOrderDelivered('${o.id}')">✅ Entregue</button>
+        </div>`;
+      }).join('') || '<p style="color:var(--text-secondary);">Nenhum pedido.</p>';
+
+      const resSnap = await getDocs(query(collection(db, 'reservations'), orderBy('day', 'desc'), orderBy('hour', 'desc')));
+      const reservations = resSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+      document.getElementById('adminReservations').innerHTML = reservations.map(r => {
+        return `<div style="padding:5px 0; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border);">
+          <span>${r.userName} - ${formatDate(r.day)} ${r.hour} (${r.people}p) - <span style="color:var(--primary);">${r.status}</span></span>
+          <div>
+            ${r.status !== 'cancelled' ? `<button class="btn btn-warning" style="padding:3px 8px; font-size:11px; margin-right:4px;" onclick="cancelReservation('${r.id}')">Cancelar</button>` : ''}
+            <button class="btn btn-danger" style="padding:3px 8px; font-size:11px;" onclick="deleteReservation('${r.id}')">Excluir</button>
+          </div>
+        </div>`;
+      }).join('') || '<p style="color:var(--text-secondary);">Nenhuma reserva.</p>';
+    }
+
+    window.markOrderDelivered = async (orderId) => {
+      if (confirm('Marcar este pedido como entregue?')) {
+        try {
+          await updateDoc(doc(db, 'orders', orderId), { status: 'entregue' });
+          toast('Pedido marcado como entregue.');
+          loadAdminData();
+          // Após marcar como entregue, o cliente poderá ver o pedido até ser removido pela limpeza automática.
+        } catch (e) {
+          toast('Erro ao atualizar pedido.', true);
+        }
+      }
+    };
+
+    window.cancelReservation = async (reservationId) => {
+      if (confirm('Cancelar esta reserva?')) {
+        try {
+          await updateDoc(doc(db, 'reservations', reservationId), { status: 'cancelled' });
+          toast('Reserva cancelada.');
+          loadAdminData();
+        } catch (e) {
+          toast('Erro ao cancelar reserva.', true);
+        }
+      }
+    };
+
+    window.deleteReservation = async (reservationId) => {
+      if (confirm('Excluir permanentemente esta reserva?')) {
+        try {
+          await deleteDoc(doc(db, 'reservations', reservationId));
+          toast('Reserva excluída.');
+          loadAdminData();
+        } catch (e) {
+          toast('Erro ao excluir reserva.', true);
+        }
+      }
+    };
+
+    window.saveSettings = async () => {
+      settings.reservaOpen = document.getElementById('reservaOpen').value;
+      settings.reservaClose = document.getElementById('reservaClose').value;
+      settings.deliveryOpen = document.getElementById('deliveryOpen').value;
+      settings.deliveryClose = document.getElementById('deliveryClose').value;
+      settings.capacity = parseInt(document.getElementById('capacityInput').value) || 20;
+      settings.deliveryFee = parseFloat(document.getElementById('feeInput').value) || 5;
+      settings.minOrder = parseFloat(document.getElementById('minOrderInput').value) || 20;
+      try {
+        await setDoc(doc(db, 'settings', 'general'), settings);
+        toast('Configurações salvas!');
+      } catch (e) {
+        toast('Erro ao salvar.', true);
+      }
+    };
+
+    window.addMenuItem = async () => {
+      const name = prompt('Nome do item:');
+      if (!name) return;
+      const priceStr = prompt('Preço (ex: 29.90):');
+      const price = parseFloat(priceStr);
+      if (isNaN(price) || price <= 0) return toast('Preço inválido.', true);
+      const desc = prompt('Descrição (opcional):') || '';
+      const img = prompt('URL da imagem (opcional):') || '';
+      try {
+        await addDoc(collection(db, 'menu'), { name, price, description: desc, imageUrl: img, active: true });
+        toast('Item adicionado!');
+        await refreshMenuData();
+      } catch (e) {
+        toast('Erro ao adicionar item.', true);
+      }
+    };
+
+    window.editMenuItem = async (id) => {
+      const menuSnap = await getDocs(collection(db, 'menu'));
+      const allItems = menuSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+      const item = allItems.find(i => i.id === id);
+      if (!item) return toast('Item não encontrado.', true);
+      const name = prompt('Nome do item:', item.name);
+      if (name === null) return;
+      const priceStr = prompt('Preço (ex: 29.90):', item.price.toString());
+      const price = parseFloat(priceStr);
+      if (isNaN(price) || price <= 0) return toast('Preço inválido.', true);
+      const desc = prompt('Descrição (opcional):', item.description || '');
+      if (desc === null) return;
+      const img = prompt('URL da imagem (opcional):', item.imageUrl || '');
+      if (img === null) return;
+      try {
+        await updateDoc(doc(db, 'menu', id), {
+          name: name || item.name,
+          price: price,
+          description: desc,
+          imageUrl: img
+        });
+        toast('Item atualizado!');
+        await refreshMenuData();
+      } catch (e) {
+        toast('Erro ao editar item.', true);
+      }
+    };
+
+    window.toggleMenuItem = async (id, currentActive) => {
+      try {
+        await updateDoc(doc(db, 'menu', id), { active: !currentActive });
+        toast(`Item ${currentActive ? 'desativado' : 'ativado'}!`);
+        await refreshMenuData();
+      } catch (e) {
+        toast('Erro ao alterar status.', true);
+      }
+    };
+
+    window.deleteMenuItem = async (id) => {
+      if (confirm('Tem certeza que deseja excluir este item permanentemente?')) {
+        try {
+          await deleteDoc(doc(db, 'menu', id));
+          toast('Item removido.');
+          await refreshMenuData();
+        } catch (e) {
+          toast('Erro ao excluir.', true);
+        }
+      }
+    };
+
+    async function refreshMenuData() {
+      await loadAdminData();
+      const menuSnap = await getDocs(query(collection(db, 'menu'), where('active', '==', true)));
+      menuItems = menuSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+      renderMenu();
+    }
+
+    hideLoader();
+  </script>
+</body>
+</html>
